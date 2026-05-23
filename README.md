@@ -61,7 +61,7 @@ You can find trained model in folder [trained_model](trained_model)
 
 ## Hyperparameters
 
-Below is a detailed hyperparameter table for full RE3. This will work for all stages.
+Below is a detailed hyperparameter table for full RE3. This will work for almost stages (except 5-4).
 
 | Hyperparameters | Value |
 | :--- | :--- |
@@ -90,7 +90,7 @@ Below is a detailed hyperparameter table for full RE3. This will work for all st
 
 ### How to find it:
 - `num_envs = 32`, the same as previous projects.
-- `int_adv_coef, ext_adv_coef: 0.5 and 1`, as in previous projects.
+- `int_adv_coef, ext_adv_coef: 0.5 and 1`, as in previous projects. set `int_adv_coef <= 0.1` for stage 5-4 (I test `int_adv_coef = 0.1` and `int_adv_coef = 0` as normal PPO). 
 - `gamma, gamma_int: 0.99`, like previous projects.
 - `entropy_coef = 0.01`: it just work (I don't need to tune this param)
 - `learn_step = 512, batchsize = 256, lambda = 0.95, epoch = 10, lr = 7e-5, target_kl = 0.05, clip_param = 0.2, max_grad_norm = 0.5, norm_adv = False, V_coef = 0.5`, as in previous projects.
@@ -99,6 +99,12 @@ Below is a detailed hyperparameter table for full RE3. This will work for all st
 - `k = 5`: The selection was random, based on papers and several RE3 projects (the paper used `k = 3` or `k = 50`, but reports showed that values like `[1, 3, 5, 7, or even 9]` did not make much difference). I used `k = 3` when tuning the intrinsic reward with RMS, but it did not work at all. Then I tried `k = 5` (still did not work). After that, I switched to min-max scaling, and it worked. I kept `k = 5` because it worked well, although `k = 3` might still be better, as suggested in the paper.
 - `average_entropy = False`: using only the k-th element in KNN or the mean of the k elements in KNN to calculate the intrinsic reward. The paper used two settings: (`average_entropy = False`, `k = 3`) and (`average_entropy = True`, `k = 50`). I tried both settings as well (but using `average_entropy = False`, `k = 5`). I found that using `average_entropy = True` may lead to slower training compared to using `average_entropy = False`, `k = 5` as the default setting. However, both settings successfully completed 1-3, 5-3, and 8-4, with two runs for each setting.
 - `capacity = 1e5`: as in paper (paper use 1e4 or 1e5 depending on the environment).
+- This Hyperparameters work for almost stages except 5-4. Then I tuning for stage 5-4:
+    - run stage 5-4 2nd time (continue fail).
+    - k = 3 (fail)
+    - k = 50 + average_entropy = True (fail).
+    - I observed that the intrinsic reward norm can be very high, averaging > 0.5 and the increases and decreases are fairly consistent (perhaps the policy falls into a certain range and only optimizes local ups and downs during training, I'm not sure). --> reduce int_adv_coef = 0.1 (actually, PPO doesn't need RE3 to complete, so I only need to reduce the influence of int_adv_coef and don't need to observe the intrinsic reward norm).
+    - int_adv_coef = 0.1 --> work
 
 ## Training step and training time
 
@@ -123,7 +129,7 @@ Below is a detailed hyperparameter table for full RE3. This will work for all st
 | 5 | 1 | 154103 | 04:16:55 |
 | 5 | 2 | 430592 | 12:30:17 |
 | 5 | 3 | 1619443 | 23:33:10 |
-| 5 | 4 | 0 | 0:00:00 |
+| `5` | `4` | `86526`  | `1:46:01` |
 | 6 | 1 | 44541 | 01:13:43 |
 | 6 | 2 | 365042 | 10:04:09 |
 | 6 | 3 | 1707002 | 1 days 08:32:09 |
@@ -136,6 +142,8 @@ Below is a detailed hyperparameter table for full RE3. This will work for all st
 | 8 | 2 | 892925 | 22:55:50 |
 | 8 | 3 | 1035760 | 1 days 02:10:50 |
 | 8 | 4 | 1200609 | 21:47:12 |
+
+You can view the reward and intrinsic reward charts during training in the folder [figure](/figure) or in the [figure.md](/figure.md) file.
 
 ## Discussion
 
@@ -150,6 +158,10 @@ Below is a detailed hyperparameter table for full RE3. This will work for all st
     - I then tuned `int_coef` with values `[1, 0.5, 0.2, 0.1, 0.05, 0.01]`, but it still did not work.
     - After that, I switched to min-max scaling, and it worked.
 
+* Stage 5-4:
+    - This is a very easy stage with most algorithms I've tried (almost always completed very quickly). But I tried tuning a few things and still failed (it seems the intrinsic reward norm is very high > 0.5). And the increases and decreases are fairly consistent (perhaps the policy falls into a certain range and only optimizes local ups and downs during training, I'm not sure).
+    - I had to reduce int_adv_coef = 0.1 to reduce the influence of intrinsic reward (it always works because PPO 0 needs intrinsic reward and still completes this stage well).
+
 ## Requirements
 
 * **python 3>3.6**
@@ -162,7 +174,7 @@ Below is a detailed hyperparameter table for full RE3. This will work for all st
 * **numpy**
 
 ## Acknowledgements
-With my code, I can completed all 31/32 stages of Super Mario Bros. Easy stage 5-4, but can't complete it? 
+With my code, I can completed all 32/32 stages of Super Mario Bros.
 
 ## Reference
 * [rllte RE3](https://github.com/RLE-Foundation/rllte/blob/main/rllte/xplore/reward/re3.py)
